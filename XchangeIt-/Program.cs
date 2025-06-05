@@ -332,7 +332,7 @@ namespace CurrencyConverter
             // Perform conversion
             if (fromCurrency == toCurrency)
             {
-                Console.WriteLine($"\n✅ Result: {amount:F2} {fromCurrency}");
+                Console.WriteLine($"\n✅ Results: {amount:F2} {fromCurrency}");
                 return;
             }
 
