@@ -5,6 +5,12 @@
 This project is a **Currency Exchange Rate Converter** built using **C#**, designed to convert an amount from one currency to another. It supports multiple currencies and optionally connects to live exchange rate APIs or uses fixed/local data for conversions.
 
 ---
+Team Members
+•	Ha Phuong Anh (A00323123)
+•	Luthfat Muhammed (A00305747)
+•	Lizza Martinez (A00298231)
+   
+   
 
 ## Features
 
@@ -35,7 +41,7 @@ This project is a **Currency Exchange Rate Converter** built using **C#**, desig
 
 ---
 
-## ⚙️ How It Works
+##  How It Works
 
 1. **User inputs** the amount, source currency, target currency, and optionally a date.
 2. The application **uses a rate provider** to get the exchange rate (fixed, local, or API).
