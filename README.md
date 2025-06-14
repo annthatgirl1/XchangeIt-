@@ -57,41 +57,43 @@ o	convertedAmount = amount * exchangeRate
 5.	The result is displayed to the user through the selected UI.
 ________________________________________
 Technologies Used
-•	Language: C#
-•	UI Options: Console Application, WinForms, or WPF
-•	Data Sources:
+-	Language: C#
+-	UI Options: Console Application, WinForms, or WPF
+-	Data Sources:
 o	Fixed rates (JSON or XML files)
 o	API data (Fixer.io, ECB)
 
 ________________________________________
 Future Enhancements
-•	Add exchange rate trend charts
-•	Enable alert notifications for rate thresholds
-•	Maintain conversion history and logs
-•	Localization and multi-language support
+-	Add exchange rate trend charts
+-	Enable alert notifications for rate thresholds
+-	Maintain conversion history and logs
+-	Localization and multi-language support
 Agile Task Board (Progress Tracker)
 The following section tracks the development status of the Currency Exchange Rate Converter project. Tasks are organized into different stages to visualize project progress, support agile collaboration, and ensure accountability among team members.
 ________________________________________
 Backlog (Not Started)
-•	Add support for currency trend charts.
-•	Implement alert system for exchange rate thresholds.
-•	Add localization and language selection.
-•	Create user manual for application usage and troubleshooting.
+- 	Add support for currency trend charts.
+-	Implement alert system for exchange rate thresholds.
+- 	Add localization and language selection.
+-	Create user manual for application usage and troubleshooting.
 ________________________________________
 In Progress (Currently Being Worked On)
-•	Final PowerPoint presentation preparation. (All)
-•	Integrate software testing (unit and integration tests) into the codebase. (Luthfat)
-•	UI polishing and usability improvements. (Luthfat)
+-	Final PowerPoint presentation preparation. (All)
+- 	Integrate software testing (unit and integration tests) into the codebase. (Luthfat)
+-	UI polishing and usability improvements. (Luthfat)
 ________________________________________
 In Review
-•	API Integration: Committed real-time exchange rate fetching logic to GitHub. (Lizza)
-•	Transaction History: Began development of transaction log/history feature after the first professor check-in. (Lizza)
+- 	API Integration: Committed real-time exchange rate fetching logic to GitHub. (Lizza)
+-  Transaction History: Began development of transaction log/history feature after the first professor check-in. (Lizza)
 ________________________________________
-Completed
-•	Initial professor check-in meeting completed. (All)
-•	Basic currency conversion functionality implemented. (All)
-•	Input validation and error handling complete. (Luthfat)
-•	Local fixed-rate JSON file integration. (Ha Phuong Anh)
-•	Historical rate lookup implementation. (Lizza)
-•	GitHub repository initialized and commits in place. (All)
+### ✅ Completed
+
+- Initial professor check-in meeting completed (All)
+- Basic currency conversion functionality implemented (All)
+- Input validation and error handling complete (Luthfat)
+- Local fixed-rate JSON file integration (Ha Phuong Anh)
+- Historical rate lookup implementation (Lizza)
+- GitHub repository initialized and commits in place (All)
+- PowerPoint presentation uploaded (Ha Phuong Anh)
 
