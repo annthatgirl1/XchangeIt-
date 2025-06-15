@@ -1,4 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 public class Task
 {
@@ -92,6 +95,7 @@ namespace CurrencyConverter
         private Dictionary<string, Dictionary<string, decimal>> exchangeRates;
         private List<ConversionRecord> conversionHistory;
         private List<string> favoritePairs;
+        private const string HISTORY_FILE = "test.txt";
 
         public CurrencyConverter()
         {
@@ -99,6 +103,102 @@ namespace CurrencyConverter
             InitializeExchangeRates();
             conversionHistory = new List<ConversionRecord>();
             favoritePairs = new List<string>();
+
+            // 🔄 NUEVO: Cargar historial desde archivo al inicializar
+            LoadHistoryFromFile();
+        }
+
+        // 🔄 NUEVO: Método para cargar historial desde test.txt
+        private void LoadHistoryFromFile()
+        {
+            try
+            {
+                if (File.Exists(HISTORY_FILE))
+                {
+                    string json = File.ReadAllText(HISTORY_FILE);
+                    if (!string.IsNullOrWhiteSpace(json))
+                    {
+                        var loadedHistory = JsonSerializer.Deserialize<List<ConversionRecord>>(json);
+                        conversionHistory = loadedHistory ?? new List<ConversionRecord>();
+
+                        Console.WriteLine($"✅ Loaded {conversionHistory.Count} conversion records from {HISTORY_FILE}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"📝 No existing history file found. Starting fresh.");
+                }
+            }
+            catch (JsonException jsonEx)
+            {
+                Console.WriteLine($"⚠️ Error parsing history file (corrupted JSON): {jsonEx.Message}");
+                Console.WriteLine("Starting with empty history...");
+                conversionHistory = new List<ConversionRecord>();
+            }
+            catch (UnauthorizedAccessException authEx)
+            {
+                Console.WriteLine($"⚠️ Access denied to history file: {authEx.Message}");
+                Console.WriteLine("Starting with empty history...");
+                conversionHistory = new List<ConversionRecord>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Error loading history from {HISTORY_FILE}: {ex.Message}");
+                Console.WriteLine("Starting with empty history...");
+                conversionHistory = new List<ConversionRecord>();
+            }
+        }
+        private void SaveHistoryToFile()
+        {
+            try
+            {
+                // Read existing lines to avoid duplicates (optional)
+                var existingLines = new HashSet<string>();
+                if (File.Exists(HISTORY_FILE))
+                {
+                    existingLines = new HashSet<string>(File.ReadAllLines(HISTORY_FILE));
+                }
+
+                var newLines = new List<string>();
+
+                foreach (var conversion in conversionHistory)
+                {
+                    // Format: [06/12/2025 20:15] 300 USD → 375.00 CAD (Rate: 1.2500)
+                    string line = $"[{conversion.Timestamp:MM/dd/yyyy HH:mm}] {conversion.Amount} {conversion.FromCurrency} → {conversion.Result:F2} {conversion.ToCurrency} (Rate: {conversion.Rate:F4})";
+
+                    // Only add if not already in file
+                    if (!existingLines.Contains(line))
+                    {
+                        newLines.Add(line);
+                    }
+                }
+
+                if (newLines.Count > 0)
+                {
+                    // Append only new lines
+                    File.AppendAllLines(HISTORY_FILE, newLines);
+                    Console.WriteLine($"💾 History appended to {HISTORY_FILE} ({newLines.Count} new records)");
+                }
+                else
+                {
+                    Console.WriteLine($"💾 No new records to append to {HISTORY_FILE}");
+                }
+            }
+            catch (UnauthorizedAccessException authEx)
+            {
+                Console.WriteLine($"⚠️ Access denied when saving to {HISTORY_FILE}: {authEx.Message}");
+                Console.WriteLine("History will not persist between sessions.");
+            }
+            catch (DirectoryNotFoundException dirEx)
+            {
+                Console.WriteLine($"⚠️ Directory not found when saving to {HISTORY_FILE}: {dirEx.Message}");
+                Console.WriteLine("History will not persist between sessions.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Error saving history to {HISTORY_FILE}: {ex.Message}");
+                Console.WriteLine("History will not persist between sessions.");
+            }
         }
 
         private void InitializeCurrencies()
@@ -266,6 +366,16 @@ namespace CurrencyConverter
             Console.WriteLine("💱 CURRENCY CONVERTER - C# CONSOLE APP");
             Console.WriteLine("=====================================");
             Console.WriteLine("Welcome to the Currency Converter application!");
+
+            // 🔄 NUEVO: Mostrar info del archivo de historial
+            if (File.Exists(HISTORY_FILE))
+            {
+                Console.WriteLine($"📁 History file: {HISTORY_FILE} (Found {conversionHistory.Count} records)");
+            }
+            else
+            {
+                Console.WriteLine($"📁 History file: {HISTORY_FILE} (Will be created)");
+            }
             Console.WriteLine();
         }
 
@@ -286,7 +396,7 @@ namespace CurrencyConverter
             Console.Write("Select function (0-7): ");
         }
 
-        private void ConvertCurrency()
+        private async void ConvertCurrency()
         {
             Console.Clear();
             Console.WriteLine("💰 CONVERT CURRENCY");
@@ -342,7 +452,9 @@ namespace CurrencyConverter
                 return;
             }
 
-            decimal rate = exchangeRates[fromCurrency][toCurrency];
+            decimal rate = await GetExchangeRateAsync(fromCurrency, toCurrency, amount);
+
+            //decimal rate = exchangeRates[fromCurrency][toCurrency];
             decimal result = amount * rate;
 
             // Display result
@@ -368,6 +480,9 @@ namespace CurrencyConverter
             if (conversionHistory.Count > 20)
                 conversionHistory.RemoveAt(conversionHistory.Count - 1);
 
+            // 🔄 NUEVO: Guardar historial al archivo después de cada conversión
+            SaveHistoryToFile();
+
             // Ask to add to favorites
             string pairKey = $"{fromCurrency} → {toCurrency}";
             if (!favoritePairs.Contains(pairKey))
@@ -378,6 +493,32 @@ namespace CurrencyConverter
                     favoritePairs.Add(pairKey);
                     Console.WriteLine("✅ Added to favorites list!");
                 }
+            }
+        }
+
+        public class ExchangeRateResponse
+        {
+            public bool success { get; set; } = false;
+            public decimal result { get; set; }
+        }
+
+        async Task<decimal> GetExchangeRateAsync(string fromCurrency, string toCurrency, decimal amount)
+        {
+            HttpClient _httpClient = new();
+
+            var apiKey = "a60bce151e1e63e253832eb9c7808ff9";
+
+            var url = $"https://api.currencylayer.com/convert?access_key={apiKey}&from={fromCurrency}&to={toCurrency}&amount={amount}";
+            var response = await _httpClient.GetFromJsonAsync<ExchangeRateResponse>(url);
+
+            if (response.success)
+            {
+                var rate = response.result;
+                return rate;
+            }
+            else
+            {
+                throw new Exception("There was an error with the API.");
             }
         }
 
@@ -395,41 +536,120 @@ namespace CurrencyConverter
 
             Console.WriteLine($"\nTotal: {currencies.Count} currencies");
         }
-
         private void ShowConversionHistory()
         {
             Console.Clear();
             Console.WriteLine("📊 CONVERSION HISTORY");
             Console.WriteLine("======================");
 
-            if (conversionHistory.Count == 0)
+            const string HISTORY_FILE = "test.txt";
+
+            try
             {
-                Console.WriteLine("📝 No conversion history yet.");
-                return;
-            }
+                if (!File.Exists(HISTORY_FILE))
+                {
+                    Console.WriteLine("📝 No conversion history file found.");
+                    Console.WriteLine($"💾 History file: {HISTORY_FILE}");
+                    return;
+                }
 
-            Console.WriteLine($"Displaying {conversionHistory.Count} most recent conversions:\n");
+                string[] lines = File.ReadAllLines(HISTORY_FILE);
 
-            for (int i = 0; i < conversionHistory.Count; i++)
-            {
-                Console.WriteLine($"{i + 1,2}. {conversionHistory[i]}");
-            }
+                if (lines.Length == 0)
+                {
+                    Console.WriteLine("📝 No conversion history yet.");
+                    Console.WriteLine($"💾 History is saved to: {HISTORY_FILE}");
+                    return;
+                }
 
-            // Show statistics
-            var totalAmount = conversionHistory.Sum(h => h.Amount);
-            var mostUsedFrom = conversionHistory.GroupBy(h => h.FromCurrency)
+                Console.WriteLine($"Displaying {lines.Length} most recent conversions:\n");
+                Console.WriteLine($"💾 Data source: {HISTORY_FILE}\n");
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    Console.WriteLine($"{i + 1,2}. {lines[i]}");
+                }
+
+                // Parse lines for statistics
+                var conversions = new List<ConversionData>();
+
+                foreach (string line in lines)
+                {
+                    if (TryParseConversionLine(line, out ConversionData conversion))
+                    {
+                        conversions.Add(conversion);
+                    }
+                }
+
+                if (conversions.Count > 0)
+                {
+                    var totalAmount = conversions.Sum(c => c.Amount);
+                    var mostUsedFrom = conversions.GroupBy(c => c.FromCurrency)
                                                .OrderByDescending(g => g.Count())
                                                .FirstOrDefault()?.Key;
-            var mostUsedTo = conversionHistory.GroupBy(h => h.ToCurrency)
+                    var mostUsedTo = conversions.GroupBy(c => c.ToCurrency)
                                              .OrderByDescending(g => g.Count())
                                              .FirstOrDefault()?.Key;
 
-            Console.WriteLine("\n📈 STATISTICS:");
-            Console.WriteLine($"- Total conversions: {conversionHistory.Count}");
-            Console.WriteLine($"- Most used source currency: {mostUsedFrom}");
-            Console.WriteLine($"- Most used target currency: {mostUsedTo}");
+                    Console.WriteLine("\n📈 STATISTICS:");
+                    Console.WriteLine($"- Total conversions: {conversions.Count}");
+                    Console.WriteLine($"- Total amount converted: {totalAmount:F2}");
+                    Console.WriteLine($"- Most used source currency: {mostUsedFrom}");
+                    Console.WriteLine($"- Most used target currency: {mostUsedTo}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error reading history file: {ex.Message}");
+                Console.WriteLine($"💾 File: {HISTORY_FILE}");
+            }
         }
 
+        // Helper method to parse conversion lines
+        private bool TryParseConversionLine(string line, out ConversionData conversion)
+        {
+            conversion = new ConversionData();
+
+            try
+            {
+                // Parse format: [06/12/2025 20:15] 300 USD → 375.00 CAD (Rate: 1.2500)
+                var parts = line.Split(new[] { "] ", " → ", " (Rate: " }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length >= 4)
+                {
+                    // Extract amount and from currency
+                    var amountPart = parts[1].Split(' ');
+                    if (amountPart.Length >= 2)
+                    {
+                        conversion.Amount = decimal.Parse(amountPart[0]);
+                        conversion.FromCurrency = amountPart[1];
+                    }
+
+                    // Extract result and to currency
+                    var resultPart = parts[2].Split(' ');
+                    if (resultPart.Length >= 2)
+                    {
+                        conversion.ToCurrency = resultPart[1];
+                    }
+
+                    return true;
+                }
+            }
+            catch
+            {
+                // Ignore parsing errors for individual lines
+            }
+
+            return false;
+        }
+
+        // Helper class for conversion data
+        public class ConversionData
+        {
+            public decimal Amount { get; set; }
+            public string FromCurrency { get; set; }
+            public string ToCurrency { get; set; }
+        }
         private void ManageFavorites()
         {
             Console.Clear();
@@ -660,7 +880,26 @@ namespace CurrencyConverter
             if (Console.ReadLine()?.ToLower().Trim() == "y")
             {
                 conversionHistory.Clear();
-                Console.WriteLine("✅ All history cleared!");
+
+                // 🔄 NUEVO: Eliminar archivo de historial o guardarlo vacío
+                try
+                {
+                    if (File.Exists(HISTORY_FILE))
+                    {
+                        File.Delete(HISTORY_FILE);
+                        Console.WriteLine($"✅ All history cleared and {HISTORY_FILE} deleted!");
+                    }
+                    else
+                    {
+                        Console.WriteLine("✅ All history cleared!");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"✅ History cleared from memory, but couldn't delete {HISTORY_FILE}: {ex.Message}");
+                    // Alternatively, save empty history
+                    SaveHistoryToFile();
+                }
             }
             else
             {
