@@ -104,11 +104,11 @@ namespace CurrencyConverter
             conversionHistory = new List<ConversionRecord>();
             favoritePairs = new List<string>();
 
-            // 🔄 NUEVO: Cargar historial desde archivo al inicializar
+            // 🔄 NEW: Load history from file on startup
             LoadHistoryFromFile();
         }
 
-        // 🔄 NUEVO: Método para cargar historial desde test.txt
+        // 🔄 NEW: Method to load history from test.txt
         private void LoadHistoryFromFile()
         {
             try
