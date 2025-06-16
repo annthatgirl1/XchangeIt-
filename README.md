@@ -96,4 +96,5 @@ ________________________________________
 - Historical rate lookup implementation (Lizza)
 - GitHub repository initialized and commits in place (All)
 - PowerPoint presentation uploaded (Ha Phuong Anh)
+- API added to program code (Lizza)
 
